@@ -26,6 +26,8 @@ def read_clean_file(filepath):
     df = pd.read_csv(filepath)
     df['start_time'] = df['start_time'].apply(parse_datetime)
 
+    if 'Capacity' in df.columns:
+        df['Capacity'] = pd.to_numeric(df['Capacity'], errors='coerce')
     return df
 
 def extract_cycle_features(filepath, cycle):
@@ -94,8 +96,8 @@ def get_discharges(filepath, df):
             mean_current.append(None)
             max_current.append(None)
             mean_temp.append(None)
-            max_temp.append(feats[None])
-            discharge_time.append(feats[None])
+            max_temp.append(None)
+            discharge_time.append(None)
     df_discharges['mean_voltage'] = mean_voltage
     df_discharges['max_voltage'] = max_voltage
     df_discharges['min_voltage'] = min_voltage
