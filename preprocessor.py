@@ -28,6 +28,7 @@ def read_clean_file(filepath):
 
     if 'Capacity' in df.columns:
         df['Capacity'] = pd.to_numeric(df['Capacity'], errors='coerce')
+        
     return df
 
 def extract_cycle_features(filepath, cycle):
@@ -107,4 +108,5 @@ def get_discharges(filepath, df):
     df_discharges['max_temperature'] = max_temp
     df_discharges['discharge_time'] = discharge_time
 
+    df_discharges = df_discharges.dropna()
     return df_discharges
