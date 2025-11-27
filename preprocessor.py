@@ -53,6 +53,44 @@ def extract_cycle_features(filepath, cycle):
     features['max_temperature'] = df_cycle['Temperature_measured'].max()
     
     features['discharge_time'] = df_cycle['Time'].max() - df_cycle['Time'].min()
+
+    #Internal resistance estimate R = (VOC - V_load) / I
+
+    #dataset has a tendency for discharges to start with really low current
+    threshold = 0.1 
+    valid_rows = df_cycle[np.abs(df_cycle['Current_load']) > threshold]
+    
+    if len(valid_rows) > 0:
+        i_start = valid_rows.index[0]
+    else:
+        # fallback if dataset is weird
+        i_start = df_cycle.index[5]
+    
+    I0 = abs(df_cycle.loc[i_start, 'Current_measured'])
+    V0 = df_cycle.loc[i_start, 'Voltage_measured']
+    
+    # NASA method assumption for open-circuit voltage
+    VOC = V0 + 0.04  #empirical offset used in PHM08 papers
+    #internal resistance
+    features['r_internal'] = (VOC - V0) / I0 if I0 > 0 else np.nan
+
+    #mean slope dV/dt
+    dVdt = np.gradient(df_cycle['Voltage_measured'], df_cycle['Time'])
+    features['mean_dvdt'] = np.mean(dVdt)
+
+    #Delivered capacity Ah = integral(I / 3600)dt
+    capacity_As = np.trapz(
+                abs(df_cycle['Current_measured']),
+                df_cycle['Time']
+            )
+    features['capacity_Ah'] = capacity_As / 3600
+
+    voltage_drop = (
+                df_cycle['Voltage_measured'].iloc[0] -
+                df_cycle['Voltage_measured'].iloc[-1]
+            )
+    features['voltage_drop'] = voltage_drop
+    
     
     return features
 
@@ -109,4 +147,84 @@ def get_discharges(filepath, df):
     df_discharges['discharge_time'] = discharge_time
 
     df_discharges = df_discharges.dropna()
+    return df_discharges
+
+
+def get_discharges_phyiscs(filepath, df):
+    """
+    input: 
+        filepath to the 'cleaned_dataset' folder
+        main df
+    output: df with only discharges and added cycles and cycle features
+    """
+    df_discharges = df[df['type'] == 'discharge'][['start_time', 'ambient_temperature', 'battery_id', 'uid', 'filename', 'Capacity']].copy()
+    df_discharges['cycle_number'] = df_discharges.groupby('battery_id').cumcount() + 1
+    
+    mean_voltage = []
+    max_voltage = []
+    min_voltage = []
+    
+    mean_current = []
+    max_current = []
+    
+    mean_temp = []
+    max_temp = []
+    discharge_time = []
+
+    R_internal = []
+    mean_dVdt = []
+    capacity_Ah = []
+    capacity_ratio = []
+    voltage_drop = []
+    
+    for _, row in df_discharges.iterrows():
+        try:
+            file = row['filename']
+            feats = extract_cycle_features(filepath, file)
+            mean_voltage.append(feats['mean_voltage'])
+            max_voltage.append(feats['max_voltage'])
+            min_voltage.append(feats['min_voltage'])
+            mean_current.append(feats['mean_current'])
+            max_current.append(feats['max_current'])
+            mean_temp.append(feats['mean_temperature'])
+            max_temp.append(feats['max_temperature'])
+            discharge_time.append(feats['discharge_time'])
+            R_internal.append(feats['r_internal'])
+            mean_dVdt.append(feats['mean_dvdt'])
+            capacity_Ah.append(feats['capacity_Ah'])
+            voltage_drop.append(feats['voltage_drop'])
+
+            capacity_ratio.append(feats['capacity_Ah'] / row['Capacity'])
+        except Exception as e:
+            print(f'error: {e}')
+            mean_voltage.append(np.nan)
+            max_voltage.append(np.nan)
+            min_voltage.append(np.nan)
+            mean_current.append(np.nan)
+            max_current.append(np.nan)
+            mean_temp.append(np.nan)
+            max_temp.append(np.nan)
+            discharge_time.append(np.nan)
+            R_internal.append(np.nan)
+            mean_dVdt.append(np.nan)
+            capacity_Ah.append(np.nan)
+            capacity_ratio.append(np.nan)
+            voltage_drop.append(np.nan)
+    df_discharges['mean_voltage'] = mean_voltage
+    df_discharges['max_voltage'] = max_voltage
+    df_discharges['min_voltage'] = min_voltage
+    df_discharges['mean_current'] = mean_current
+    df_discharges['max_current'] = max_current
+    df_discharges['mean_temperature'] = mean_temp
+    df_discharges['max_temperature'] = max_temp
+    df_discharges['discharge_time'] = discharge_time
+    df_discharges['r_internal'] = R_internal
+    df_discharges['mean_dvdt'] = mean_dVdt
+    df_discharges['capacity_Ah'] = capacity_Ah
+    df_discharges['capacity_ratio'] = capacity_ratio
+    df_discharges['voltage_drop'] = voltage_drop
+
+    df_discharges = df_discharges.dropna()
+
+
     return df_discharges
