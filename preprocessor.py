@@ -194,7 +194,11 @@ def get_discharges_phyiscs(filepath, df):
             capacity_Ah.append(feats['capacity_Ah'])
             voltage_drop.append(feats['voltage_drop'])
 
-            capacity_ratio.append(feats['capacity_Ah'] / row['Capacity'])
+            if pd.notna(row['Capacity']) and row['Capacity'] > 0:
+                capacity_ratio.append(feats['capacity_Ah'] / row['Capacity'])
+            else:
+                capacity_ratio.append(np.nan)
+
         except Exception as e:
             print(f'error: {e}')
             mean_voltage.append(np.nan)
