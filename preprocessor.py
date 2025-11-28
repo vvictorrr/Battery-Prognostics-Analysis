@@ -173,8 +173,8 @@ def get_discharges_phyiscs(filepath, df):
     """
     df_discharges = df[df['type'] == 'discharge'][['start_time', 'ambient_temperature', 'battery_id', 'uid', 'filename', 'Capacity']].copy()
     df_discharges['cycle_number'] = df_discharges.groupby('battery_id').cumcount() + 1
-    df["C_nominal"] = df["battery_id"].map(C_nominal)
-    df["SOH"] = df["Capacity"] / df["C_nominal"]
+    df_discharges["C_nominal"] = df_discharges["battery_id"].map(C_nominal)
+    df_discharges["SOH"] = df_discharges["Capacity"] / df_discharges["C_nominal"]
     
     mean_voltage = []
     max_voltage = []
