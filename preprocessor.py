@@ -148,6 +148,20 @@ def get_discharges(filepath, df):
 
     df_discharges = df_discharges.dropna()
     return df_discharges
+def add_rul(df):
+    df = df.sort_values(["battery_id", "cycle_number"]).copy()
+
+    rul_list = []
+
+    for bid, group in df.groupby("battery_id"):
+        eol_cycle = group[group["SOH"] <= 0.8]["cycle_number"].min()
+        if np.isnan(eol_cycle):
+            eol_cycle = group["cycle_number"].max()
+
+        rul_list.extend(eol_cycle - group["cycle_number"])
+
+    df["RUL"] = rul_list
+    return df
 
 
 def get_discharges_phyiscs(filepath, df):
@@ -231,6 +245,8 @@ def get_discharges_phyiscs(filepath, df):
     df_discharges['voltage_drop'] = voltage_drop
 
     df_discharges = df_discharges.dropna()
+
+    df_discharges = add_rul(df_discharges)
 
 
     return df_discharges
