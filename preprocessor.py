@@ -3,11 +3,13 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+import ast
 from datetime import datetime
 
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
+
 
 def parse_datetime(array_str):
     vals = np.fromstring(array_str.strip('[]'), sep=' ')
@@ -28,6 +30,10 @@ def read_clean_file(filepath):
 
     if 'Capacity' in df.columns:
         df['Capacity'] = pd.to_numeric(df['Capacity'], errors='coerce')
+    elif 'Re' in df.columns:
+        df['Re'] = pd.to_numeric(df['Re'], errors='coerce')
+    elif 'Rct' in df.columns:
+        df['Rct'] = pd.to_numeric(df['Rct'], errors='coerce') 
         
     return df
 
@@ -35,7 +41,7 @@ def extract_cycle_features(filepath, cycle):
     """
     Input: 
         filepath to the 'cleaned_dataset' folder
-        df_cycle = a single discharge CSV filename (time series)
+        cycle = a single discharge CSV filename (time series)
     Output: dictionary of aggregated features for ML
     """
     filepath += '/data/' + cycle
@@ -148,33 +154,47 @@ def get_discharges(filepath, df):
 
     df_discharges = df_discharges.dropna()
     return df_discharges
-def add_rul(df):
-    df = df.sort_values(["battery_id", "cycle_number"]).copy()
 
-    rul_list = []
 
-    for bid, group in df.groupby("battery_id"):
-        eol_cycle = group[group["SOH"] <= 0.8]["cycle_number"].min()
-        if np.isnan(eol_cycle):
-            eol_cycle = group["cycle_number"].max()
+def add_eol_rul(df):
+    eol_cycles = {}
+    for bid, g in df.groupby('battery_id'):
+        g = g.sort_values('cycle_number')
+        
+        # Find first cycle where capacity <= EOL capacity
+        idx = np.where(g['Capacity'].values <= eol_capacity)[0]
+        
+        if len(idx) == 0:
+            raise ValueError(f"Battery {bid} never reaches EOL. "
+                             "Dataset documentation says this should not happen.")
+        
+        eol_cycle = int(g['cycle_number'].iloc[idx[0]])
+        eol_cycles[bid] = eol_cycle
 
-        rul_list.extend(eol_cycle - group["cycle_number"])
-
-    df["RUL"] = rul_list
+    # 3. Assign RUL for each row
+    df['EOL_cycle'] = df['battery_id'].map(eol_cycles)
+    df['RUL'] = df['EOL_cycle'] - df['cycle_number']
+    
+    # Guaranteed: RUL >= 0 for all rows
     return df
 
 
-def get_discharges_phyiscs(filepath, df):
+def get_discharges_phyiscs(filepath, df, nominal_capacity=2.0, eol_capacity=1.4):
     """
     input: 
         filepath to the 'cleaned_dataset' folder
         main df
     output: df with only discharges and added cycles and cycle features
+    nominal capacity: stated in datased readme
+    eol_capacity: end of life capacity, also stated in dataset readme. When capacity reaches 70% of nominal capacity
     """
     df_discharges = df[df['type'] == 'discharge'][['start_time', 'ambient_temperature', 'battery_id', 'uid', 'filename', 'Capacity']].copy()
     df_discharges['cycle_number'] = df_discharges.groupby('battery_id').cumcount() + 1
-    df_discharges["C_nominal"] = df_discharges["battery_id"].map(C_nominal)
-    df_discharges["SOH"] = df_discharges["Capacity"] / df_discharges["C_nominal"]
+
+    df_discharges["SOH"] = df_discharges["Capacity"] / nominal_capacity
+
+    df_discharges["EOL_cycle"] = df_discharges.groupby("battery_id")["cycle_number"].transform("max")
+    df_discharges["RUL"] = df_discharges["EOL_cycle"] - df_discharges["cycle_number"]
     
     mean_voltage = []
     max_voltage = []
@@ -250,3 +270,106 @@ def get_discharges_phyiscs(filepath, df):
 
 
     return df_discharges
+
+def impedance_features(filepath, cycle):
+    """
+    Extract usable impedance features from complex-valued EIS CSV
+    """
+
+    filepath += '/data/' + cycle
+    df_cycle = pd.read_csv(filepath)
+
+    '''
+    complex_cols = [
+        "Sense_current",
+        "Battery_current",
+        "Current_ratio",
+        "Battery_impedance",
+        "Rectified_Impedance"
+    ]'''
+    complex_cols = [
+        "Battery_impedance",
+        "Rectified_Impedance"
+    ]
+
+    # Convert "(a+bj)" strings which are complex numbers to something workable
+    for col in complex_cols:
+        df_cycle[col] = df_cycle[col].apply(lambda x: ast.literal_eval(x) if isinstance(x, str) else np.nan)
+
+    # Extract magnitudes, real, imag, phases
+    feats = {}
+
+    Z = df_cycle["Battery_impedance"].dropna()
+
+    if len(Z) > 0:
+        feats["Battery_impedance_real_mean"] = np.real(Z).mean()
+        feats["Battery_impedance_mag_mean"]  = np.abs(Z).mean()
+    else:
+        feats["Battery_impedance_real_mean"] = np.nan
+        feats["Battery_impedance_mag_mean"]  = np.nan
+
+    Zr = df_cycle["Rectified_Impedance"].dropna()
+
+    if len(Zr) > 0:
+        feats["Rectified_impedance_real_mean"] = np.real(Zr).mean()
+        feats["Rectified_impedance_phase_mean"] = np.angle(Zr).mean()
+    else:
+        feats["Rectified_impedance_real_mean"] = np.nan
+        feats["Rectified_impedance_phase_mean"] = np.nan
+
+    return feats
+
+def merge_impedance_with_discharges(df, df_dis, filepath):
+    """
+    Adds impedance features to each discharge event.
+    Matches the nearest impedance **before** the discharge start_time.
+    """
+
+    # Separate impedance rows
+    df_imp = df[df["type"] == "impedance"].copy()
+
+    # Extract impedance features for each impedance file
+    imp_feat_list = []
+
+    for _, row in df_imp.iterrows():
+        feats = impedance_features(filepath, row["filename"])
+        feats["start_time"] = row["start_time"]
+        feats["battery_id"] = row["battery_id"]
+        imp_feat_list.append(feats)
+
+    df_imp_feat = pd.DataFrame(imp_feat_list)
+
+    # Sort both by time, should already be done but just to catch
+    df_imp_feat = df_imp_feat.sort_values("start_time")
+    df_dis = df_dis.sort_values("start_time")
+
+    #primary merge, first impedence before a discharge
+    merged_back = pd.merge_asof(
+        df_dis,
+        df_imp_feat,
+        on="start_time",
+        by="battery_id",
+        direction="backward"
+    )
+
+    #secondary merge, impedence after a discharge
+    merged_forward = pd.merge_asof(
+        df_dis,
+        df_imp_feat,
+        on="start_time",
+        by="battery_id",
+        direction="forward"
+    )
+
+    imp_cols = [
+        "Battery_impedance_real_mean",
+        "Battery_impedance_mag_mean",
+        "Rectified_impedance_real_mean",
+        "Rectified_impedance_phase_mean"
+    ]
+
+    #if one didn't have a impedence before it (first discharge), it fills with the forwards
+    for col in imp_cols:
+        merged_back[col] = merged_back[col].fillna(merged_forward[col])
+
+    return merged_back
