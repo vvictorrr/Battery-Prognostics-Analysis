@@ -309,6 +309,10 @@ def merge_impedance_with_discharges(df, df_dis, filepath):
         feats = impedance_features(filepath, row["filename"])
         feats["start_time"] = row["start_time"]
         feats["battery_id"] = row["battery_id"]
+
+        #Re and Rct are sometimes complex for some reason
+        feats["Re"] = float(np.real(complex(row["Re"])))
+        feats["Rct"] = float(np.real(complex(row["Rct"])))
         imp_feat_list.append(feats)
 
     df_imp_feat = pd.DataFrame(imp_feat_list)
@@ -339,7 +343,9 @@ def merge_impedance_with_discharges(df, df_dis, filepath):
         "Battery_impedance_real_mean",
         "Battery_impedance_mag_mean",
         "Rectified_impedance_real_mean",
-        "Rectified_impedance_phase_mean"
+        "Rectified_impedance_phase_mean",
+        "Re",
+        "Rct"
     ]
 
     #if one didn't have a impedence before it (first discharge), it fills with the forwards
