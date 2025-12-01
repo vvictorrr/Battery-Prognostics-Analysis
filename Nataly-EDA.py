@@ -12,7 +12,7 @@ df_discharges = pp.merge_impedance_with_discharges(df, df_discharges, path)
 df_discharges = df_discharges.copy()
 df_discharges['first_cycle_time'] = df_discharges.groupby('battery_id')['start_time'].transform('min')
 df_discharges['elapsed_days'] = (df_discharges['start_time'] - df_discharges['first_cycle_time']).dt.total_seconds() / (3600*24)
-df_discharges['relative_age'] = df_discharges.groupby('battery_id')['elapsed_days'].transform(lambda x: x / x.max())
+# df_discharges['relative_age'] = df_discharges.groupby('battery_id')['elapsed_days'].transform(lambda x: x / x.max())
 
 print(df_discharges.describe())
 
@@ -55,70 +55,76 @@ plt.title('Correlation Heatmap')
 plt.tight_layout()
 plt.show()
 
-def normalize(series):
-    'min-max to 0-1'
-    if series.max() == series.min():
-        return series * 0  
-    return (series - series.min()) / (series.max() - series.min())
+# def normalize(series):
+#     'min-max to 0-1'
+#     if series.max() == series.min():
+#         return series * 0  
+#     return (series - series.min()) / (series.max() - series.min())
 
 def plot_group_subplots(group_name, group_df):
-
     # normalize stats per battery
     df_norm = group_df.copy()
     for battery, bdf in df_norm.groupby('battery_id'):
         idx = bdf.index
 
-        df_norm.loc[idx, 'Capacity'] = normalize(bdf['Capacity'])
-        df_norm.loc[idx, 'mean_voltage'] = normalize(bdf['mean_voltage'])
-        df_norm.loc[idx, 'mean_temperature'] = normalize(bdf['mean_temperature'])
-        df_norm.loc[idx, 'mean_current'] = normalize(bdf['mean_current'])
-        df_norm.loc[idx, 'cycle_number'] = normalize(bdf['cycle_number'])
-
+        df_norm.loc[idx, 'Capacity'] = (bdf['Capacity'])
+        df_norm.loc[idx, 'mean_voltage'] = (bdf['mean_voltage'])
+        df_norm.loc[idx, 'mean_temperature'] = (bdf['mean_temperature'])
+        df_norm.loc[idx, 'mean_current'] = (bdf['mean_current'])
+        df_norm.loc[idx, 'cycle_number'] = (bdf['cycle_number'])
+        df_norm['cycle_number_norm'] = 0.0  
+        df_norm.loc[idx, 'cycle_number_norm'] = (bdf['cycle_number'].astype(float))
     fig, axes = plt.subplots(2, 3, figsize=(16, 10))
-    fig.suptitle(f'{group_name} Battery Relationships (Normalized)', fontsize=16)
+    fig.suptitle(f'{group_name} Battery Relationships', fontsize=16)
+    
 
     # c vs cycles
     ax = axes[0,0]
     for battery, bdf in df_norm.groupby('battery_id'):
-        ax.plot(bdf['cycle_number'], bdf['Capacity'], alpha=0.7)
-    ax.set_title('Capacity vs Cycle Number (Normalized)')
+        ax.plot(bdf['cycle_number'], bdf['Capacity'], alpha=0.7, label=battery)
+    ax.set_title('Capacity vs Cycle Number')
     ax.set_xlabel('Cycle Number')
-    ax.set_ylabel('Normalized Capacity')
+    ax.set_ylabel('Capacity')
     ax.grid(alpha=0.3)
+    ax.legend(title="Battery ID", fontsize=8)
 
     # v vs cycles
     ax = axes[0,1]
     for battery, bdf in df_norm.groupby('battery_id'):
-        ax.plot(bdf['cycle_number'], bdf['mean_voltage'], alpha=0.7)
-    ax.set_title('Voltage vs Cycle Number (Normalized)')
+        ax.plot(bdf['cycle_number'], bdf['mean_voltage'], alpha=0.7, label=battery)
+    ax.set_title('Voltage vs Cycle Number')
     ax.set_xlabel('Cycle Number')
-    ax.set_ylabel('Normalized Voltage')
+    ax.set_ylabel('Voltage')
     ax.grid(alpha=0.3)
+    ax.legend(title="Battery ID", fontsize=8)
 
     # t vs cycles
     ax = axes[0,2]
     for battery, bdf in df_norm.groupby('battery_id'):
-        ax.plot(bdf['cycle_number'], bdf['mean_temperature'], alpha=0.7)
-    ax.set_title('Temperature vs Cycle Number(Normalized)')
+        ax.plot(bdf['cycle_number'], bdf['mean_temperature'], alpha=0.7, label=battery)
+    ax.set_title('Temperature vs Cycle Number')
     ax.set_xlabel('Cycle Number')
-    ax.set_ylabel('Normalized Temperature')
+    ax.set_ylabel('Temperature')
     ax.grid(alpha=0.3)
+    ax.legend(title="Battery ID", fontsize=8)
 
     # c vs t
     ax = axes[1,0]
-    ax.scatter(df_norm['mean_temperature'], df_norm['Capacity'], alpha=0.5)
-    ax.set_title('Capacity vs Temperature (Normalized)')
-    ax.set_xlabel('Normalized Temperature')
-    ax.set_ylabel('Normalized Capacity')
+    ax.scatter(df_norm['mean_temperature'], df_norm['Capacity'], alpha=0.5, color='purple')
+    ax.set_title('Capacity vs Temperature')
+    ax.set_xlabel('Temperature')
+    ax.set_ylabel('Capacity')
     ax.grid(alpha=0.3)
+
 
     # i vs t
     ax = axes[1,1]
-    ax.scatter(df_norm['mean_temperature'], df_norm['mean_current'], alpha=0.5)
-    ax.set_title('Current vs Temperature (Normalized)')
-    ax.set_xlabel('Normalized Temperature')
-    ax.set_ylabel('Normalized Current')
+    ax.scatter(df_norm['mean_temperature'], df_norm['mean_current'], alpha=0.5, color='green')
+    ax.set_title('Current vs Temperature')
+    ax.set_xlabel('Temperature')
+    ax.set_ylabel('Current')
     ax.grid(alpha=0.3)
+  
 
     axes[1,2].axis('off')
     plt.tight_layout(rect=[0, 0, 1, 0.96])
