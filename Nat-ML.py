@@ -90,4 +90,53 @@ rul_pred = linreg.predict(rulx_val)
 print("Linear Regression MAE:", mean_absolute_error(ruly_val, rul_pred))
 print("Linear Regression MSE:", mean_squared_error(ruly_val, rul_pred))
 print("Linear Regression R2:", r2_score(ruly_val, rul_pred))
+dis_val['pred_lr_rul'] = rul_pred
 
+
+# def lr_capacity_for_battery(df, battery_id):
+#     d = df[df["battery_id"] == battery_id]
+
+#     if d.empty:
+#         print(f"No data for battery_id {battery_id}")
+#         return
+
+#     plt.figure(figsize=(12,5))
+
+#     x = np.arange(len(d))
+
+#     plt.plot(x, d["Capacity"], label="True Capacity", linewidth=3)
+#     plt.plot(x, d["pred_lr_cap"], label="RF Prediction", linestyle="--")
+
+#     plt.title(f"Capacity Prediction – Battery {battery_id}")
+#     plt.xlabel("Cycle (validation subset)")
+#     plt.ylabel("Capacity (Ah)")
+#     plt.legend()
+#     plt.grid(True)
+#     plt.tight_layout()
+#     plt.show()
+
+# print(bat_val)
+# lr_capacity_for_battery(dis_val, 'B0049')
+
+def lr_rul_for_battery(df, battery_id):
+    d = df[df["battery_id"] == battery_id]
+
+    if d.empty:
+        print(f"No data for battery_id {battery_id}")
+        return
+
+    plt.figure(figsize=(12,5))
+
+    x = np.arange(len(d))
+
+    plt.plot(x, d["RUL"], label="True RUL", linewidth=3)
+    plt.plot(x, d["pred_lr_rul"], label="RF Prediction", linestyle="--", color='pink', linewidth=3)
+
+    plt.title(f"RUL Prediction – Battery {battery_id}")
+    plt.xlabel("Cycle (validation subset)")
+    plt.ylabel("RUL (Cycles)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+lr_rul_for_battery(dis_val, 'B0049')
