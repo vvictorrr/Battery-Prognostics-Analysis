@@ -266,7 +266,7 @@ def get_discharges_phyiscs(filepath, df, nominal_capacity=2.0, eol_capacity=1.4)
 
     df_discharges = df_discharges.dropna()
 
-    df_discharges = add_rul(df_discharges)
+    # df_discharges = add_rul(df_discharges)
 
 
     return df_discharges
