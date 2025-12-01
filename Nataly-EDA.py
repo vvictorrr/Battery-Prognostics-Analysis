@@ -2,10 +2,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-import preprocessor
-path = 'cleaned_dataset'
-df = preprocessor.read_clean_file(path)
-df_discharges = preprocessor.get_discharges(path, df)
+import preprocessor as pp 
+path = 'cleaned_dataset/'
+df = pp.read_clean_file(path)
+df_discharges = pp.get_discharges_phyiscs(path, df)
+df_discharges = pp.merge_impedance_with_discharges(df, df_discharges, path)
+
 
 df_discharges = df_discharges.copy()
 df_discharges['first_cycle_time'] = df_discharges.groupby('battery_id')['start_time'].transform('min')

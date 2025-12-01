@@ -139,4 +139,4 @@ def lr_rul_for_battery(df, battery_id):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-lr_rul_for_battery(dis_val, 'B0049')
+# lr_rul_for_battery(dis_val, 'B0049')
