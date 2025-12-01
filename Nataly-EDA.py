@@ -72,35 +72,35 @@ def plot_group_subplots(group_name, group_df):
         df_norm.loc[idx, 'mean_voltage'] = normalize(bdf['mean_voltage'])
         df_norm.loc[idx, 'mean_temperature'] = normalize(bdf['mean_temperature'])
         df_norm.loc[idx, 'mean_current'] = normalize(bdf['mean_current'])
-        df_norm.loc[idx, 'relative_age'] = normalize(bdf['relative_age'])
+        df_norm.loc[idx, 'cycle_number'] = normalize(bdf['cycle_number'])
 
     fig, axes = plt.subplots(2, 3, figsize=(16, 10))
     fig.suptitle(f'{group_name} Battery Relationships (Normalized)', fontsize=16)
 
-    # c vs time
+    # c vs cycles
     ax = axes[0,0]
     for battery, bdf in df_norm.groupby('battery_id'):
-        ax.plot(bdf['relative_age'], bdf['Capacity'], alpha=0.7)
-    ax.set_title('Capacity vs Relative Age (Normalized)')
-    ax.set_xlabel('Relative Age (0–1)')
+        ax.plot(bdf['cycle_number'], bdf['Capacity'], alpha=0.7)
+    ax.set_title('Capacity vs Cycle Number (Normalized)')
+    ax.set_xlabel('Cycle Number')
     ax.set_ylabel('Normalized Capacity')
     ax.grid(alpha=0.3)
 
-    # v vs time
+    # v vs cycles
     ax = axes[0,1]
     for battery, bdf in df_norm.groupby('battery_id'):
-        ax.plot(bdf['relative_age'], bdf['mean_voltage'], alpha=0.7)
-    ax.set_title('Voltage vs Relative Age (Normalized)')
-    ax.set_xlabel('Relative Age (0–1)')
+        ax.plot(bdf['cycle_number'], bdf['mean_voltage'], alpha=0.7)
+    ax.set_title('Voltage vs Cycle Number (Normalized)')
+    ax.set_xlabel('Cycle Number')
     ax.set_ylabel('Normalized Voltage')
     ax.grid(alpha=0.3)
 
-    # t vs time
+    # t vs cycles
     ax = axes[0,2]
     for battery, bdf in df_norm.groupby('battery_id'):
-        ax.plot(bdf['relative_age'], bdf['mean_temperature'], alpha=0.7)
-    ax.set_title('Temperature vs Relative Age (Normalized)')
-    ax.set_xlabel('Relative Age (0–1)')
+        ax.plot(bdf['cycle_number'], bdf['mean_temperature'], alpha=0.7)
+    ax.set_title('Temperature vs Cycle Number(Normalized)')
+    ax.set_xlabel('Cycle Number')
     ax.set_ylabel('Normalized Temperature')
     ax.grid(alpha=0.3)
 

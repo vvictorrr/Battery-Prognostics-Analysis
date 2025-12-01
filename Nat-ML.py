@@ -42,22 +42,6 @@ dis_val = pp.get_discharges_phyiscs(path, df_val)
 dis_tr = pp.merge_impedance_with_discharges(df_tr, dis_tr, path)
 dis_val = pp.merge_impedance_with_discharges(df_val, dis_val, path)
 
-features = ['ambient_temperature', 
-            'cycle_number',
-            'mean_voltage',
-            'max_voltage',
-            'min_voltage',
-            'mean_current',
-            'max_current',
-            'mean_temperature',
-            'max_temperature',
-            'discharge_time']
-target = 'Capacity'
-disx_tr = dis_tr[features].values
-disy_tr = dis_tr[target].values
-disx_val = dis_val[features].values
-disy_val = dis_val[target].values
-
 features_physics = ['ambient_temperature', 
             'cycle_number',
             'mean_voltage',
@@ -78,45 +62,51 @@ disy_tr = dis_tr[target].values
 disx_val = dis_val[features_physics].values
 disy_val = dis_val[target].values
 
+linreg = LinearRegression()
+linreg.fit(disx_tr, disy_tr)
+cap_pred = linreg.predict(disx_val)
+print("Linear Regression MAE:", mean_absolute_error(disy_val, cap_pred))
+print("Linear Regression MSE:", mean_squared_error(disy_val, cap_pred)) 
+print("Linear Regression R2:", r2_score(disy_val, cap_pred))
+dis_val['pred_lr_cap'] = cap_pred
+
+def lr_capacity_for_battery(df, battery_id):
+    d = df[df["battery_id"] == battery_id]
+
+    if d.empty:
+        print(f"No data for battery_id {battery_id}")
+        return
+
+    plt.figure(figsize=(12,5))
+
+    x = np.arange(len(d))
+
+    plt.plot(x, d["Capacity"], label="True Capacity", linewidth=3)
+    plt.plot(x, d["pred_lr_cap"], label="RF Prediction", linestyle="--", color='pink', linewidth=3)
+
+    plt.title(f"Capacity Prediction – Battery {battery_id}")
+    plt.xlabel("Cycle (validation subset)")
+    plt.ylabel("Capacity (Ah)")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+print(bat_val)
+lr_capacity_for_battery(dis_val, 'B0049')
+
 target = 'RUL'
 rulx_tr = dis_tr[features_physics].values
 ruly_tr = dis_tr[target].values
 rulx_val = dis_val[features_physics].values
 ruly_val = dis_val[target].values
-linreg = LinearRegression()
+
 linreg.fit(rulx_tr, ruly_tr)
 rul_pred = linreg.predict(rulx_val)
-
 print("Linear Regression MAE:", mean_absolute_error(ruly_val, rul_pred))
 print("Linear Regression MSE:", mean_squared_error(ruly_val, rul_pred))
 print("Linear Regression R2:", r2_score(ruly_val, rul_pred))
 dis_val['pred_lr_rul'] = rul_pred
-
-
-# def lr_capacity_for_battery(df, battery_id):
-#     d = df[df["battery_id"] == battery_id]
-
-#     if d.empty:
-#         print(f"No data for battery_id {battery_id}")
-#         return
-
-#     plt.figure(figsize=(12,5))
-
-#     x = np.arange(len(d))
-
-#     plt.plot(x, d["Capacity"], label="True Capacity", linewidth=3)
-#     plt.plot(x, d["pred_lr_cap"], label="RF Prediction", linestyle="--")
-
-#     plt.title(f"Capacity Prediction – Battery {battery_id}")
-#     plt.xlabel("Cycle (validation subset)")
-#     plt.ylabel("Capacity (Ah)")
-#     plt.legend()
-#     plt.grid(True)
-#     plt.tight_layout()
-#     plt.show()
-
-# print(bat_val)
-# lr_capacity_for_battery(dis_val, 'B0049')
 
 def lr_rul_for_battery(df, battery_id):
     d = df[df["battery_id"] == battery_id]
@@ -139,4 +129,4 @@ def lr_rul_for_battery(df, battery_id):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-# lr_rul_for_battery(dis_val, 'B0049')
+lr_rul_for_battery(dis_val, 'B0049')
