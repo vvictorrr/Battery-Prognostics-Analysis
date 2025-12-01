@@ -156,29 +156,6 @@ def get_discharges(filepath, df):
     return df_discharges
 
 
-def add_eol_rul(df):
-    eol_cycles = {}
-    for bid, g in df.groupby('battery_id'):
-        g = g.sort_values('cycle_number')
-        
-        # Find first cycle where capacity <= EOL capacity
-        idx = np.where(g['Capacity'].values <= eol_capacity)[0]
-        
-        if len(idx) == 0:
-            raise ValueError(f"Battery {bid} never reaches EOL. "
-                             "Dataset documentation says this should not happen.")
-        
-        eol_cycle = int(g['cycle_number'].iloc[idx[0]])
-        eol_cycles[bid] = eol_cycle
-
-    # 3. Assign RUL for each row
-    df['EOL_cycle'] = df['battery_id'].map(eol_cycles)
-    df['RUL'] = df['EOL_cycle'] - df['cycle_number']
-    
-    # Guaranteed: RUL >= 0 for all rows
-    return df
-
-
 def get_discharges_phyiscs(filepath, df, nominal_capacity=2.0, eol_capacity=1.4):
     """
     input: 
@@ -265,9 +242,6 @@ def get_discharges_phyiscs(filepath, df, nominal_capacity=2.0, eol_capacity=1.4)
     df_discharges['voltage_drop'] = voltage_drop
 
     df_discharges = df_discharges.dropna()
-
-    # df_discharges = add_rul(df_discharges)
-
 
     return df_discharges
 

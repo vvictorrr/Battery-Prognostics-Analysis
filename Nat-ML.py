@@ -11,8 +11,10 @@ from sklearn.model_selection import train_test_split
 from scipy.optimize import curve_fit
 
 import preprocessor as pp
+
 import importlib
 importlib.reload(pp)
+
 path = 'cleaned_dataset/'
 df = pp.read_clean_file(path)
 df_dis = pp.get_discharges_phyiscs(path, df)
@@ -39,8 +41,7 @@ dis_tr = pp.get_discharges_phyiscs(path, df_tr)
 dis_val = pp.get_discharges_phyiscs(path, df_val)
 dis_tr = pp.merge_impedance_with_discharges(df_tr, dis_tr, path)
 dis_val = pp.merge_impedance_with_discharges(df_val, dis_val, path)
-df_dis_tr = pp.merge_impedance_with_discharges(df_tr, dis_tr, path)
-print (df_dis_tr.columns)
+
 features = ['ambient_temperature', 
             'cycle_number',
             'mean_voltage',
