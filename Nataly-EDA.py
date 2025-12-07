@@ -124,9 +124,19 @@ def plot_group_subplots(group_name, group_df):
     ax.set_xlabel('Temperature')
     ax.set_ylabel('Current')
     ax.grid(alpha=0.3)
+
+    ax = axes[1,2]
+    sc = ax.scatter(df_norm['cycle_number'], df_norm['Capacity'], alpha=0.5, c=df_norm['mean_temperature'])
+    fig.colorbar(sc, ax=ax, label='mean temperature (C)')
+    ax.set_title('cycle vs capacity')
+    ax.set_xlabel('cycle number')
+    ax.set_ylabel('capacity')
+    ax.grid(alpha=0.3)
+
+
   
 
-    axes[1,2].axis('off')
+    #axes[1,2].axis('off')
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show()
 
