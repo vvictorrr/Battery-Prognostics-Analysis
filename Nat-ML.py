@@ -93,7 +93,8 @@ def lr_capacity_for_battery(df, battery_id):
     plt.show()
 
 print(bat_val)
-lr_capacity_for_battery(dis_val, 'B0049')
+for bat in bat_val:
+    lr_capacity_for_battery(dis_val, bat)
 
 target = 'RUL'
 rulx_tr = dis_tr[features_physics].values
@@ -129,4 +130,5 @@ def lr_rul_for_battery(df, battery_id):
     plt.grid(True)
     plt.tight_layout()
     plt.show()
-lr_rul_for_battery(dis_val, 'B0049')
+for bat in bat_val:
+    lr_rul_for_battery(dis_val, bat)

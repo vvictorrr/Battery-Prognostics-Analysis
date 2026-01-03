@@ -89,6 +89,7 @@ def plot_group_subplots(group_name, group_df):
     ax.legend(title="Battery ID", fontsize=8)
 
     # v vs cycles
+    '''
     ax = axes[0,1]
     for battery, bdf in df_norm.groupby('battery_id'):
         ax.plot(bdf['cycle_number'], bdf['mean_voltage'], alpha=0.7, label=battery)
@@ -96,7 +97,14 @@ def plot_group_subplots(group_name, group_df):
     ax.set_xlabel('Cycle Number')
     ax.set_ylabel('Voltage')
     ax.grid(alpha=0.3)
-    ax.legend(title="Battery ID", fontsize=8)
+    ax.legend(title="Battery ID", fontsize=8)'''
+
+    ax = axes[0,1]
+    sc = ax.scatter(df_norm['RUL'], df_norm['discharge_time'], alpha=0.5)
+    ax.set_title('Discharge Time vs RUL')
+    ax.set_xlabel('Remaining Useful Life (cycles)')
+    ax.set_ylabel('Discharge Time (s)')
+    ax.grid(alpha=0.3)
 
     # t vs cycles
     ax = axes[0,2]
